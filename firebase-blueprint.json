@@ -1,0 +1,80 @@
+{
+  "entities": {
+    "Resident": {
+      "title": "Resident",
+      "description": "A medical resident in the hospital.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "level": { "type": "string", "description": "R1, R2, R3, R4" },
+        "subLevel": { "type": "string", "description": "A or B" },
+        "specialty": { "type": "string" },
+        "entryYear": { "type": "integer" },
+        "entryMonth": { "type": "integer" },
+        "progress": { "type": "number" }
+      },
+      "required": ["id", "name", "level", "subLevel"]
+    },
+    "ClinicalSection": {
+      "title": "Clinical Section",
+      "description": "A clinical department or rotation area.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "color": { "type": "string" },
+        "icon": { "type": "string" }
+      },
+      "required": ["id", "name", "color", "icon"]
+    },
+    "MasterPlan": {
+      "title": "Master Plan",
+      "description": "The global rotation plan for all residents.",
+      "type": "object",
+      "properties": {
+        "1": { "type": "object" },
+        "2": { "type": "object" },
+        "3": { "type": "object" },
+        "4": { "type": "object" }
+      }
+    },
+    "RotationChangeRequest": {
+      "title": "Rotation Change Request",
+      "description": "A request to change a resident's rotation.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "residentId": { "type": "string" },
+        "currentSection": { "type": "string" },
+        "currentMonth": { "type": "string" },
+        "currentYear": { "type": "string" },
+        "newSection": { "type": "string" },
+        "newMonth": { "type": "string" },
+        "newYear": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "processing", "confirmed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["residentId", "newSection", "newMonth", "newYear", "status"]
+    }
+  },
+  "firestore": {
+    "/residents/{residentId}": {
+      "schema": "Resident",
+      "description": "Collection of all residents."
+    },
+    "/sections/{sectionId}": {
+      "schema": "ClinicalSection",
+      "description": "Collection of clinical sections."
+    },
+    "/config/masterPlan": {
+      "schema": "MasterPlan",
+      "description": "The global master plan configuration."
+    },
+    "/rotationRequests/{requestId}": {
+      "schema": "RotationChangeRequest",
+      "description": "Collection of rotation change requests."
+    }
+  }
+}

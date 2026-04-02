@@ -1,0 +1,153 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: residents
+    // Document ID: residentId
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - level: string (required)
+    //   - subLevel: string (required)
+    //   - specialty: string
+    //   - entryYear: number
+    //   - entryMonth: number
+    //   - progress: number
+    //
+    // Collection: sections
+    // Document ID: sectionId
+    // Fields:
+    //   - id: string (required)
+    //   - name: string (required)
+    //   - color: string (required)
+    //   - icon: string (required)
+    //
+    // Collection: config
+    // Document ID: masterPlan
+    // Fields:
+    //   - 1: map (required)
+    //   - 2: map (required)
+    //   - 3: map (required)
+    //   - 4: map (required)
+    //
+    // Collection: rotationRequests
+    // Document ID: requestId
+    // Fields:
+    //   - residentId: string (required)
+    //   - currentSection: string
+    //   - currentMonth: string
+    //   - currentYear: string
+    //   - newSection: string (required)
+    //   - newMonth: string (required)
+    //   - newYear: string (required)
+    //   - reason: string
+    //   - status: string (required, enum: pending, processing, confirmed)
+    //   - createdAt: timestamp
+    //
+    // Collection: users
+    // Document ID: userId
+    // Fields:
+    //   - role: string (required)
+    //   - email: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (
+          (request.auth.token.email == "jesufh@gmail.com" && request.auth.token.email_verified == true) ||
+          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        );
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function isValidResident(data) {
+      return hasRequiredFields(['id', 'name', 'level', 'subLevel']) &&
+             data.id is string &&
+             data.name is string &&
+             data.level is string &&
+             data.subLevel is string;
+    }
+
+    function isValidSection(data) {
+      return hasRequiredFields(['id', 'name', 'color', 'icon']) &&
+             data.id is string &&
+             data.name is string &&
+             data.color is string &&
+             data.icon is string;
+    }
+
+    function isValidMasterPlan(data) {
+      return data is map;
+    }
+
+    function isValidRotationRequest(data) {
+      return hasRequiredFields(['residentId', 'newSection', 'newMonth', 'newYear', 'status']) &&
+             data.residentId is string &&
+             data.newSection is string &&
+             data.newMonth is string &&
+             data.newYear is string &&
+             data.status in ['pending', 'processing', 'confirmed'];
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    match /residents/{residentId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /sections/{sectionId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /config/masterPlan {
+      allow read: if isAuthenticated();
+      allow create, update: if isAdmin();
+    }
+
+    match /rotationRequests/{requestId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidRotationRequest(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Test connection path
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
